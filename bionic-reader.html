@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bionic Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --surface: #ede8de;
+    --surface2: #e3ddd2;
+    --border: #ccc5b5;
+    --text: #1a1714;
+    --text-muted: #7a7268;
+    --accent: #c84b2f;
+    --accent2: #2f6bc8;
+    --bold-color: #1a1714;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --transition: 0.2s ease;
+  }
+  [data-theme="dark"] {
+    --bg: #12100e;
+    --surface: #1c1916;
+    --surface2: #252119;
+    --border: #3a352e;
+    --text: #ede8de;
+    --text-muted: #8a8278;
+    --accent: #e8694e;
+    --accent2: #6b9fe8;
+    --bold-color: #ffffff;
+    --shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background var(--transition), color var(--transition);
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background var(--transition), border-color var(--transition);
+  }
+
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo span { color: var(--accent); }
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 300;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 2px;
+    display: block;
+    line-height: 1;
+  }
+
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+  .btn:active { transform: translateY(0); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { opacity: 0.88; color: #fff; }
+  .btn.icon { padding: 8px 10px; }
+  .btn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface2)); }
+
+  /* MAIN LAYOUT */
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    height: calc(100vh - 65px);
+  }
+
+  .controls-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-wrap: wrap;
+    transition: background var(--transition);
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .control-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  /* SLIDER */
+  .slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 120px;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--pct, 50%), var(--border) var(--pct, 50%), var(--border) 100%);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--bg);
+    transition: transform 0.15s;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+  .slider-val {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--accent);
+    min-width: 28px;
+  }
+
+  /* TOGGLE SWITCH */
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle input { display: none; }
+  .toggle-track {
+    width: 34px; height: 18px;
+    border-radius: 9px;
+    background: var(--border);
+    position: relative;
+    transition: background var(--transition);
+    flex-shrink: 0;
+  }
+  .toggle input:checked ~ .toggle-track { background: var(--accent); }
+  .toggle-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform var(--transition);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(16px); }
+  .toggle-label { font-size: 0.72rem; color: var(--text-muted); }
+
+  .divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+  /* PANELS */
+  .panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background var(--transition);
+  }
+  .panel-header {
+    padding: 14px 24px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-title {
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+  }
+  .panel-left { background: var(--surface); border-right: 1px solid var(--border); }
+  .panel-right { background: var(--bg); }
+
+  textarea {
+    flex: 1;
+    padding: 24px;
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.05rem;
+    line-height: 1.85;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    color: var(--text);
+    transition: color var(--transition);
+  }
+  textarea::placeholder { color: var(--text-muted); font-style: italic; opacity: 0.7; }
+
+  .preview-area {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.05rem;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .preview-area b {
+    font-weight: 700;
+    color: var(--bold-color);
+    transition: color var(--transition);
+  }
+
+  .char-count {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    padding: 6px 24px 10px;
+    text-align: right;
+  }
+
+  /* COPY FEEDBACK */
+  .copy-feedback {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.78rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 999;
+  }
+  .copy-feedback.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* FILE UPLOAD */
+  .file-btn {
+    position: relative;
+    overflow: hidden;
+  }
+  .file-btn input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    font-size: 0;
+  }
+
+  /* READING MODE */
+  .reading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 500;
+    overflow-y: auto;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .reading-overlay.open { display: block; }
+  .reading-overlay.visible { opacity: 1; }
+  .reading-content {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 80px 40px 120px;
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.2rem;
+    line-height: 2;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .reading-content b { font-weight: 700; color: var(--bold-color); }
+  .reading-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+  }
+  .reading-title {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+  }
+  .reading-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    transition: width 0.1s linear;
+    z-index: 600;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    pointer-events: none;
+    opacity: 0.35;
+  }
+  .empty-icon { font-size: 2.5rem; }
+  .empty-text { font-size: 0.78rem; color: var(--text-muted); text-align: center; }
+
+  .preview-wrap { position: relative; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr 1fr; height: auto; min-height: calc(100vh - 55px); }
+    .panel { min-height: 260px; }
+    .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+    header { padding: 14px 18px; }
+    .controls-bar { padding: 10px 18px; gap: 12px; }
+    .reading-content { padding: 80px 24px 100px; font-size: 1.05rem; }
+    input[type="range"] { width: 80px; }
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .preview-area b { animation: fadeIn 0.1s ease both; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body data-theme="light">
+
+<header>
+  <div>
+    <div class="logo"><span>Bio</span>nic <span>Re</span>ader</div>
+    <span class="logo-sub">Speed reading assistant</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn" id="readingModeBtn">📖 Reading Mode</button>
+    <button class="btn icon" id="themeBtn" title="Toggle dark/light mode">☀️</button>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Controls Bar -->
+  <div class="controls-bar">
+    <div class="control-group">
+      <span class="control-label">Bold %</span>
+      <div class="slider-wrap">
+        <input type="range" id="intensitySlider" min="30" max="70" value="50" step="5">
+        <span class="slider-val" id="intensityVal">50%</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="control-group">
+      <label class="toggle">
+        <input type="checkbox" id="fullBoldToggle" checked>
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        <span class="toggle-label">Bold full short words</span>
+      </label>
+    </div>
+    <div class="divider"></div>
+    <div class="control-group" style="margin-left:auto; gap:8px;">
+      <label class="btn file-btn">
+        📂 Upload .txt
+        <input type="file" id="fileUpload" accept=".txt">
+      </label>
+      <button class="btn primary" id="copyBtn">⎘ Copy HTML</button>
+      <button class="btn" id="copyTextBtn">📋 Copy Text</button>
+      <button class="btn" id="clearBtn">✕ Clear</button>
+    </div>
+  </div>
+
+  <!-- Input Panel -->
+  <div class="panel panel-left">
+    <div class="panel-header">
+      <span class="panel-title">Input</span>
+      <span class="panel-title" id="wordCount">0 words</span>
+    </div>
+    <textarea id="inputText" placeholder="Paste or type your text here to begin…&#10;&#10;The bionic reading format will appear live on the right as you type."></textarea>
+    <div class="char-count" id="charCount">0 characters</div>
+  </div>
+
+  <!-- Preview Panel -->
+  <div class="panel panel-right">
+    <div class="panel-header">
+      <span class="panel-title">Bionic Preview</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn icon" id="fontSmaller" title="Smaller text">A−</button>
+        <button class="btn icon" id="fontBigger" title="Larger text">A+</button>
+      </div>
+    </div>
+    <div class="preview-wrap">
+      <div class="preview-area" id="preview">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">✦</div>
+          <div class="empty-text">Your bionic text<br>will appear here</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reading Mode Overlay -->
+<div class="reading-overlay" id="readingOverlay">
+  <div class="reading-progress" id="readingProgress"></div>
+  <div class="reading-header">
+    <span class="reading-title">✦ Reading Mode</span>
+    <button class="btn" id="closeReadingBtn">✕ Close</button>
+  </div>
+  <div class="reading-content" id="readingContent"></div>
+</div>
+
+<!-- Copy Feedback Toast -->
+<div class="copy-feedback" id="copyFeedback"></div>
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────
+  let intensity = 50;
+  let fullBoldShort = true;
+  let fontSize = 1.05;
+  let isDark = false;
+
+  const inputEl = document.getElementById('inputText');
+  const previewEl = document.getElementById('preview');
+  const emptyState = document.getElementById('emptyState');
+  const wordCountEl = document.getElementById('wordCount');
+  const charCountEl = document.getElementById('charCount');
+  const intensitySlider = document.getElementById('intensitySlider');
+  const intensityVal = document.getElementById('intensityVal');
+  const fullBoldToggle = document.getElementById('fullBoldToggle');
+  const copyBtn = document.getElementById('copyBtn');
+  const copyTextBtn = document.getElementById('copyTextBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const fileUpload = document.getElementById('fileUpload');
+  const themeBtn = document.getElementById('themeBtn');
+  const readingModeBtn = document.getElementById('readingModeBtn');
+  const readingOverlay = document.getElementById('readingOverlay');
+  const closeReadingBtn = document.getElementById('closeReadingBtn');
+  const readingContent = document.getElementById('readingContent');
+  const readingProgress = document.getElementById('readingProgress');
+  const copyFeedback = document.getElementById('copyFeedback');
+
+  // ─── Core Algorithm ──────────────────────────────────────────────────────
+  function boldWord(word, pct, fullBoldShort) {
+    if (!word) return word;
+
+    // Strip leading/trailing punctuation
+    const leadMatch = word.match(/^([^a-zA-Z0-9\u00C0-\u024F]*)/);
+    const trailMatch = word.match(/([^a-zA-Z0-9\u00C0-\u024F]*)$/);
+    const lead = leadMatch ? leadMatch[0] : '';
+    const trail = trailMatch ? trailMatch[0] : '';
+    const core = word.slice(lead.length, word.length - trail.length);
+
+    if (!core) return word;
+
+    const len = core.length;
+    let boldCount;
+
+    if (len <= 3) {
+      boldCount = fullBoldShort ? len : 1;
+    } else {
+      boldCount = Math.ceil(len * (pct / 100));
+      boldCount = Math.max(1, Math.min(boldCount, len - 1));
+    }
+
+    const bolded = core.slice(0, boldCount);
+    const rest = core.slice(boldCount);
+
+    return lead + '<b>' + escHtml(bolded) + '</b>' + escHtml(rest) + trail;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function processText(text, pct, fullBold) {
+    if (!text.trim()) return '';
+    // Split on whitespace, preserve whitespace tokens
+    const tokens = text.split(/(\s+)/);
+    return tokens.map(token => {
+      if (/^\s+$/.test(token)) {
+        // Convert newlines to <br>, spaces to spaces
+        return token.replace(/\n/g, '\n').replace(/ /g, ' ');
+      }
+      return boldWord(token, pct, fullBold);
+    }).join('');
+  }
+
+  // ─── Render ──────────────────────────────────────────────────────────────
+  function render() {
+    const text = inputEl.value;
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    wordCountEl.textContent = words.length + ' word' + (words.length !== 1 ? 's' : '');
+    charCountEl.textContent = text.length + ' character' + (text.length !== 1 ? 's' : '');
+
+    if (!text.trim()) {
+      previewEl.innerHTML = '';
+      previewEl.appendChild(emptyState);
+      emptyState.style.display = 'flex';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    const html = processText(text, intensity, fullBoldShort);
+    previewEl.innerHTML = html;
+  }
+
+  // ─── Controls ────────────────────────────────────────────────────────────
+  intensitySlider.addEventListener('input', () => {
+    intensity = parseInt(intensitySlider.value);
+    intensityVal.textContent = intensity + '%';
+    // Update track fill
+    const pct = ((intensity - 30) / 40) * 100;
+    intensitySlider.style.setProperty('--pct', pct + '%');
+    render();
+  });
+  // Init track
+  intensitySlider.style.setProperty('--pct', '50%');
+
+  fullBoldToggle.addEventListener('change', () => {
+    fullBoldShort = fullBoldToggle.checked;
+    render();
+  });
+
+  inputEl.addEventListener('input', render);
+
+  // Font size
+  document.getElementById('fontBigger').addEventListener('click', () => {
+    fontSize = Math.min(1.6, fontSize + 0.1);
+    previewEl.style.fontSize = fontSize + 'rem';
+  });
+  document.getElementById('fontSmaller').addEventListener('click', () => {
+    fontSize = Math.max(0.75, fontSize - 0.1);
+    previewEl.style.fontSize = fontSize + 'rem';
+  });
+
+  // ─── Copy ────────────────────────────────────────────────────────────────
+  function showToast(msg) {
+    copyFeedback.textContent = msg;
+    copyFeedback.classList.add('show');
+    setTimeout(() => copyFeedback.classList.remove('show'), 2000);
+  }
+
+  copyBtn.addEventListener('click', () => {
+    const text = inputEl.value;
+    if (!text.trim()) { showToast('Nothing to copy'); return; }
+    const html = processText(text, intensity, fullBoldShort);
+    navigator.clipboard.writeText(html).then(() => showToast('✓ HTML copied!')).catch(() => showToast('Copy failed'));
+  });
+
+  copyTextBtn.addEventListener('click', () => {
+    const text = inputEl.value;
+    if (!text.trim()) { showToast('Nothing to copy'); return; }
+    navigator.clipboard.writeText(text).then(() => showToast('✓ Text copied!')).catch(() => showToast('Copy failed'));
+  });
+
+  clearBtn.addEventListener('click', () => {
+    inputEl.value = '';
+    render();
+    inputEl.focus();
+  });
+
+  // ─── File Upload ─────────────────────────────────────────────────────────
+  fileUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.name.endsWith('.txt')) { showToast('Please upload a .txt file'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      inputEl.value = ev.target.result;
+      render();
+      showToast('✓ File loaded!');
+    };
+    reader.readAsText(file);
+    fileUpload.value = '';
+  });
+
+  // ─── Theme ───────────────────────────────────────────────────────────────
+  themeBtn.addEventListener('click', () => {
+    isDark = !isDark;
+    document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    themeBtn.textContent = isDark ? '🌙' : '☀️';
+  });
+
+  // ─── Reading Mode ─────────────────────────────────────────────────────────
+  readingModeBtn.addEventListener('click', () => {
+    const text = inputEl.value;
+    if (!text.trim()) { showToast('Add some text first'); return; }
+    const html = processText(text, intensity, fullBoldShort);
+    readingContent.innerHTML = html;
+    readingOverlay.classList.add('open');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => readingOverlay.classList.add('visible'));
+    });
+    document.body.style.overflow = 'hidden';
+  });
+
+  closeReadingBtn.addEventListener('click', closeReading);
+  readingOverlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReading(); });
+
+  function closeReading() {
+    readingOverlay.classList.remove('visible');
+    setTimeout(() => {
+      readingOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }, 300);
+  }
+
+  // Reading progress bar
+  readingOverlay.addEventListener('scroll', () => {
+    const el = readingOverlay;
+    const scrolled = el.scrollTop / (el.scrollHeight - el.clientHeight);
+    readingProgress.style.width = (scrolled * 100) + '%';
+  });
+
+  // ─── Sample text on load ──────────────────────────────────────────────────
+  const sample = `Bionic Reading is a method designed to speed up your reading by highlighting the beginning of words. Your brain automatically completes the word, allowing your eyes to move faster across the text.
+
+Try pasting any article, document, or passage here. Adjust the bold intensity slider to control how much of each word is bolded — higher values create a stronger guide for your eyes.
+
+The reading mode provides a distraction-free view for an immersive experience. You can also upload a .txt file directly from your device.`;
+
+  inputEl.value = sample;
+  render();
+</script>
+</body>
+</html>
